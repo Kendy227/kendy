@@ -8,13 +8,14 @@ import requests
 from datetime import datetime
 from telebot import TeleBot
 from telebot.types import BotCommand, InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.types import BotCommandScopeChat  # Import BotCommandScopeChat explicitly
 
 # Configuration
-TOKEN = "8186293444:AAHMOlDF_CmvhpcVCsaom4ugLnHSP7GHBzk"
+TOKEN = "7824399109:AAETEA_LzaTT5UKvoWAQouIRfPfBpb60JVA"
 PARTNER_ID = "d2c1ab6c0b58488fbd1ee0d7de0511e9"
 SECRET_KEY = "ha61HJLMhO"
 MOOGOLD_API_URL = "https://moogold.com/wp-json/v1/api/"
-ADMIN_ID = 6501929376
+ADMIN_ID = 6501929376  # Replace with your actual Telegram user ID
 BOT_NAME = "Kendy Enterprises"
 DB_PATH = "wallet.db"
 
@@ -77,10 +78,14 @@ def admin_panel(message):
         return
     
     markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("View Users", callback_data="admin_users"),
-               InlineKeyboardButton("Add Funds", callback_data="admin_add"))
-    markup.add(InlineKeyboardButton("Add Product", callback_data="admin_add_product"),
-               InlineKeyboardButton("List Products", callback_data="admin_list_products"))
+    markup.add(
+        InlineKeyboardButton("View Users", callback_data="admin_users"),
+        InlineKeyboardButton("Add Funds", callback_data="admin_add")
+    )
+    markup.add(
+        InlineKeyboardButton("Add Product", callback_data="admin_add_product"),
+        InlineKeyboardButton("List Products", callback_data="admin_list_products")
+    )
     bot.reply_to(message, "🔐 ADMIN PANEL", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("admin_"))
@@ -98,6 +103,8 @@ def handle_admin_actions(call):
         else:
             response = "\n".join([f"ID: {u[0]}, Username: {u[1]}, Balance: ₹{u[2]:.2f}" for u in users])
             bot.send_message(call.message.chat.id, f"👥 Registered Users:\n{response}")
+    elif action == "add":
+        bot.send_message(call.message.chat.id, "Use /add_funds <USER_ID> <AMOUNT> to add funds.")
     elif action == "add_product":
         bot.send_message(call.message.chat.id, "Use /add_product <PRODUCT_ID> <NAME> <PRICE> to add a product.")
     elif action == "list_products":
@@ -116,7 +123,10 @@ def add_product(message):
         return
 
     try:
+        print(f"Received /add_product command from user: {message.from_user.id}")  # Debugging
         args = message.text.split()[1:]
+        print(f"Arguments received: {args}")  # Debugging
+
         if len(args) != 3:
             bot.reply_to(message, "Usage: /add_product <PRODUCT_ID> <NAME> <PRICE>")
             return
@@ -128,6 +138,7 @@ def add_product(message):
                          (product_id, name, price))
         bot.reply_to(message, f"✅ Product '{name}' added successfully!")
     except Exception as e:
+        print(f"Error while adding product: {e}")  # Debugging
         bot.reply_to(message, f"❌ Error: {str(e)}")
 
 # --------------------
@@ -183,8 +194,11 @@ def set_commands():
         BotCommand("admin", "Admin control panel"),
         BotCommand("add_product", "Add a new product")
     ]
-    bot.set_my_commands(user_cmds)
-    bot.set_my_commands(commands=admin_cmds, scope=telebot.types.BotCommandScopeChat(chat_id=ADMIN_ID))
+    bot.set_my_commands(user_cmds)  # Set commands for all users
+    try:
+        bot.set_my_commands(commands=admin_cmds, scope=BotCommandScopeChat(chat_id=ADMIN_ID))
+    except Exception as e:
+        print(f"Failed to set admin commands: {e}")
 
 if __name__ == "__main__":
     set_commands()
